@@ -185,14 +185,16 @@ class HTTPClient(httplib2.Http):
         # re-authenticate and try again. If it still fails, bail.
         try:
             kwargs.setdefault('headers', {})
-            kwargs['headers']['X-Auth-Token'] = self.auth_token
+            if self.auth_strategy == 'keystone':
+                kwargs['headers']['X-Auth-Token'] = self.auth_token
             resp, body = self._cs_request(self.endpoint_url + url, method,
                                           **kwargs)
             return resp, body
         except exceptions.Unauthorized:
             self.authenticate()
             kwargs.setdefault('headers', {})
-            kwargs['headers']['X-Auth-Token'] = self.auth_token
+            if self.auth_strategy == 'keystone':
+                kwargs['headers']['X-Auth-Token'] = self.auth_token
             resp, body = self._cs_request(
                 self.endpoint_url + url, method, **kwargs)
             return resp, body
@@ -212,9 +214,7 @@ class HTTPClient(httplib2.Http):
                 attr='region', filter_value=self.region_name,
                 endpoint_type=self.endpoint_type)
 
-    def authenticate(self):
-        if self.auth_strategy != 'keystone':
-            raise exceptions.Unauthorized(message='unknown auth strategy')
+    def _authenticate_keystone(self):
         if self.tenant_id:
             body = {'auth': {'passwordCredentials':
                              {'username': self.username,
@@ -248,6 +248,20 @@ class HTTPClient(httplib2.Http):
         else:
             body = None
         self._extract_service_catalog(body)
+
+    def _authenticate_noauth(self):
+        if not self.endpoint_url:
+            message = 'endpoint url must be set in noauth'
+            raise exceptions.Unauthorized(message=message)
+
+    def authenticate(self):
+        if self.auth_strategy == 'keystone':
+            self._authenticate_keystone()
+        elif self.auth_strategy == 'noauth':
+            self._authenticate_noauth()
+        else:
+            message = 'unknown auth strategy: %s' % self.auth_strategy
+            raise exceptions.Unauthorized(message=message)
 
     def _get_endpoint_url(self):
         url = self.auth_url + '/tokens/%s/endpoints' % self.auth_token
