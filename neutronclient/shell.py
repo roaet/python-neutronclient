@@ -22,8 +22,11 @@ from __future__ import print_function
 
 import argparse
 import getpass
+import glob
+import imp
 import logging
 import os
+import pkgutil
 import sys
 
 from keystoneclient.auth.identity import v2 as v2_auth
@@ -351,6 +354,8 @@ class NeutronShell(app.App):
         for k, v in self.commands[apiversion].items():
             self.command_manager.add_command(k, v)
 
+        self._discover_extensions(VERSION)
+
         # Pop the 'complete' to correct the outputs of 'neutron help'.
         self.command_manager.commands.pop('complete')
 
@@ -640,6 +645,44 @@ class NeutronShell(app.App):
             for option, _action in cmd_parser._option_string_actions.items():
                 options.add(option)
         print(' '.join(commands | options))
+
+    def _discover_extensions(self, version):
+        self._load_contrib_extensions(version)
+        self._load_external_extensions()
+
+    def _load_contrib_extensions(self, version):
+        module_path = os.path.dirname(os.path.abspath(__file__))
+        ext_path = os.path.join(module_path, 'v%s' % version, "contrib")
+        ext_glob = os.path.join(ext_path, "*.py")
+        for ext_path in glob.iglob(ext_glob):
+            name = os.path.basename(ext_path)[:-3]
+            if name == "__init__":
+                continue
+
+            module = imp.load_source(name, ext_path)
+
+            if getattr(module, "COMMANDS"):
+                for attr_name, attr_value in module.COMMANDS.items():
+                    try:
+                        self.command_manager.add_command(attr_name, attr_value)
+                    except TypeError:
+                        pass
+
+    def _load_external_extensions(self):
+        for (module_loader, name, _ispkg) in pkgutil.iter_modules():
+            if name.endswith('_python_neutronclient_ext'):
+                if not hasattr(module_loader, 'load_module'):
+                    # Python 2.6 compat: actually get an ImpImporter obj
+                    module_loader = module_loader.find_module(name)
+
+                module = module_loader.load_module(name)
+                if getattr(module, "COMMANDS"):
+                    for attr_name, attr_value in module.COMMANDS.items():
+                        try:
+                            self.command_manager.add_command(attr_name,
+                                                             attr_value)
+                        except TypeError:
+                            pass
 
     def run(self, argv):
         """Equivalent to the main program for the application.
