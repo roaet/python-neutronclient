@@ -22,8 +22,11 @@ from __future__ import print_function
 
 import argparse
 import getpass
+import glob
+import imp
 import logging
 import os
+import pkgutil
 import sys
 
 from keystoneclient.auth.identity import v2 as v2_auth
@@ -41,6 +44,7 @@ from neutronclient.common import clientmanager
 from neutronclient.common import exceptions as exc
 from neutronclient.common import utils
 from neutronclient.i18n import _
+import neutronclient.neutron.v2_0 as neutronV20
 from neutronclient.neutron.v2_0 import agent
 from neutronclient.neutron.v2_0 import agentscheduler
 from neutronclient.neutron.v2_0 import credential
@@ -345,6 +349,9 @@ class NeutronShell(app.App):
         for k, v in self.commands[apiversion].items():
             self.command_manager.add_command(k, v)
 
+        self._load_contrib_extensions()
+        self._load_external_extensions()
+
         # This is instantiated in initialize_app() only when using
         # password flow auth
         self.auth_client = None
@@ -631,6 +638,40 @@ class NeutronShell(app.App):
             for option, _action in cmd_parser._option_string_actions.items():
                 options.add(option)
         print(' '.join(commands | options))
+
+    def _load_contrib_extensions(self):
+        module_path = os.path.dirname(os.path.abspath(__file__))
+        ext_path = os.path.join(module_path, "v2_0", "contrib")
+        ext_glob = os.path.join(ext_path, "*.py")
+        for ext_path in glob.iglob(ext_glob):
+            name = os.path.basename(ext_path)[:-3]
+            if name == "__init__":
+                continue
+
+            module = imp.load_source(name, ext_path)
+
+            if getattr(module, "EXTENSIONS"):
+                for attr_name, attr_value in module.EXTENSIONS.iteritems():
+                    try:
+                        self.command_manager.add_command(attr_name, attr_value)
+                    except TypeError:
+                        pass
+
+    def _load_external_extensions(self):
+        for (module_loader, name, _ispkg) in pkgutil.iter_modules():
+            if name.endswith('_python_neutronclient_ext'):
+                if not hasattr(module_loader, 'load_module'):
+                    # Python 2.6 compat: actually get an ImpImporter obj
+                    module_loader = module_loader.find_module(name)
+
+                module = module_loader.load_module(name)
+                if getattr(module, "EXTENSIONS"):
+                    for attr_name, attr_value in module.EXTENSIONS.iteritems():
+                        try:
+                            self.command_manager.add_command(attr_name,
+                                                             attr_value)
+                        except TypeError:
+                            pass
 
     def run(self, argv):
         """Equivalent to the main program for the application.
