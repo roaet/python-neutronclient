@@ -71,6 +71,7 @@ class HTTPClient(NeutronClientMixin):
                  service_type='network',
                  **kwargs):
 
+        self.roles = kwargs.get('roles', '')
         self.username = username
         self.user_id = user_id
         self.tenant_name = tenant_name
@@ -174,6 +175,9 @@ class HTTPClient(NeutronClientMixin):
             if self.auth_token is None:
                 self.auth_token = ""
             kwargs['headers']['X-Auth-Token'] = self.auth_token
+            if self.roles is None:
+                self.roles = []
+            kwargs['headers']['X-Roles'] = ','.join(self.roles)
             resp, body = self._cs_request(self.endpoint_url + url, method,
                                           **kwargs)
             return resp, body
@@ -372,7 +376,8 @@ def construct_http_client(username=None,
                           ca_cert=None,
                           service_type='network',
                           session=None,
-                          auth=None):
+                          auth=None,
+                          roles=None):
 
     if session:
         return SessionClient(session=session,
@@ -399,4 +404,5 @@ def construct_http_client(username=None,
                           service_type=service_type,
                           ca_cert=ca_cert,
                           log_credentials=log_credentials,
-                          auth_strategy=auth_strategy)
+                          auth_strategy=auth_strategy,
+                          roles=roles)
