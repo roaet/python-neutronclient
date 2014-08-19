@@ -204,6 +204,31 @@ class HTTPClient(NeutronClientMixin):
                 service_type=self.service_type,
                 endpoint_type=self.endpoint_type)
 
+    def _authenticate_rackspace(self):
+        body = {'auth': {'RAX-KSKEY:apiKeyCredentials': {
+                         'username': self.username,
+                         'apiKey': self.token}}, }
+
+        if self.auth_url is None:
+            raise exceptions.NoAuthURLProvided()
+
+        token_url = self.auth_url + "/tokens"
+        resp, resp_body = self._cs_request(token_url, "POST",
+                                           body=json.dumps(body),
+                                           content_type="application/json",
+                                           allow_redirects=True)
+        status_code = self.get_status_code(resp)
+        if status_code != 200:
+            raise exceptions.Unauthorized(message=resp_body)
+        if resp_body:
+            try:
+                resp_body = json.loads(resp_body)
+            except ValueError:
+                pass
+        else:
+            resp_body = None
+        self._extract_service_catalog(resp_body)
+
     def _authenticate_keystone(self):
         if self.user_id:
             creds = {'userId': self.user_id,
@@ -247,6 +272,8 @@ class HTTPClient(NeutronClientMixin):
             raise exceptions.Unauthorized(message=message)
 
     def authenticate(self):
+        if self.auth_strategy == 'rackspace':
+            self._authenticate_rackspace()
         if self.auth_strategy == 'keystone':
             self._authenticate_keystone()
         elif self.auth_strategy == 'noauth':

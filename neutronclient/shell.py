@@ -804,7 +804,8 @@ class NeutronShell(app.App):
             timeout=self.options.timeout,
             retries=self.options.retries,
             raise_errors=False,
-            session=auth_session,
+            session=(None if self.options.os_auth_strategy == 'rackspace' else
+                     auth_session),
             auth=auth_session.auth,
             log_credentials=True)
         return
