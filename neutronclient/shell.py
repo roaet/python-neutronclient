@@ -44,7 +44,6 @@ from neutronclient.common import clientmanager
 from neutronclient.common import exceptions as exc
 from neutronclient.common import utils
 from neutronclient.i18n import _
-import neutronclient.neutron.v2_0 as neutronV20
 from neutronclient.neutron.v2_0 import agent
 from neutronclient.neutron.v2_0 import agentscheduler
 from neutronclient.neutron.v2_0 import credential
@@ -650,8 +649,8 @@ class NeutronShell(app.App):
 
             module = imp.load_source(name, ext_path)
 
-            if getattr(module, "EXTENSIONS"):
-                for attr_name, attr_value in module.EXTENSIONS.iteritems():
+            if getattr(module, "COMMANDS"):
+                for attr_name, attr_value in module.COMMANDS.iteritems():
                     try:
                         self.command_manager.add_command(attr_name, attr_value)
                     except TypeError:
@@ -665,8 +664,8 @@ class NeutronShell(app.App):
                     module_loader = module_loader.find_module(name)
 
                 module = module_loader.load_module(name)
-                if getattr(module, "EXTENSIONS"):
-                    for attr_name, attr_value in module.EXTENSIONS.iteritems():
+                if getattr(module, "COMMANDS"):
+                    for attr_name, attr_value in module.COMMANDS.iteritems():
                         try:
                             self.command_manager.add_command(attr_name,
                                                              attr_value)
