@@ -37,6 +37,7 @@ import six.moves.urllib.parse as urlparse
 from cliff import app
 from cliff import commandmanager
 
+from neutronclient.common import auth_plugin
 from neutronclient.common import clientmanager
 from neutronclient.common import command as openstack_command
 from neutronclient.common import exceptions as exc
@@ -740,7 +741,9 @@ class NeutronShell(app.App):
         """Make sure the user has provided all of the authentication
         info we need.
         """
-        if self.options.os_auth_strategy == 'keystone':
+        _os_auth_str = self.options.os_auth_strategy
+        _auth_plugin = None
+        if _os_auth_str == 'keystone':
             if self.options.os_token or self.options.os_url:
                 # Token flow auth takes priority
                 if not self.options.os_token:
@@ -806,7 +809,12 @@ class NeutronShell(app.App):
             auth_session = self._get_keystone_session()
             auth = auth_session.auth
         else:   # not keystone
-            if not self.options.os_url:
+            if _os_auth_str:
+                try:
+                    _auth_plugin = auth_plugin.load_plugin(_os_auth_str)
+                except exc.AuthSystemNotFound:
+                    raise
+            elif not self.options.os_url:
                 raise exc.CommandError(
                     _("You must provide a service URL via"
                       " either --os-url or env[OS_URL]"))
@@ -825,6 +833,7 @@ class NeutronShell(app.App):
             region_name=self.options.os_region_name,
             api_version=self.api_version,
             auth_strategy=self.options.os_auth_strategy,
+            auth_plugin=_auth_plugin,
             # FIXME (bklei) honor deprecated service_type and
             # endpoint type until they are removed
             service_type=self.options.os_service_type or
