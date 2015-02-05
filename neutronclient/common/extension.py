@@ -1,4 +1,4 @@
-# Copyright 2012 OpenStack Foundation.
+# Copyright 2015 Rackspace Hosting Inc.
 # All Rights Reserved
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,8 +14,6 @@
 #    under the License.
 #
 
-import logging
-
 from neutronclient.common import exceptions
 from neutronclient.neutron import v2_0 as neutronV20
 
@@ -25,9 +23,16 @@ class NeutronClientExtension(neutronV20.NeutronCommand):
     _formatters = {}
     sorting_support = False
 
-    @classmethod
-    def get_logger(kls, suffix):
-        return logging.getLogger("%s.%s" % (__name__, suffix))
+
+class ClientExtensionShow(NeutronClientExtension, neutronV20.ShowCommand):
+    def get_data(self, parsed_args):
+        # NOTE(mdietz): Calls 'execute' to provide a consistent pattern
+        #               for any implementers adding extensions with
+        #               regard to any other extension verb.
+        return self.execute(parsed_args)
+
+    def execute(self, parsed_args):
+        pass
 
 
 class ClientExtensionList(NeutronClientExtension, neutronV20.ListCommand):
@@ -116,4 +121,3 @@ class ClientExtensionUpdate(NeutronClientExtension, neutronV20.UpdateCommand):
         neutron_client.put("%s/%s" % (self.resource_path, _id), body)
         self.log.debug(('Updated %(resource)s: %(id)s') %
                        {'id': parsed_args.id, 'resource': self.resource})
-        return

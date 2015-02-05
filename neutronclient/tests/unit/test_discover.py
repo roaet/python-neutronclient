@@ -39,7 +39,6 @@ class FoxInSocketsList(extension.ClientExtensionList):
     resource = "fox_socket"
     resource_plural = "fox_sockets"
     resource_path = "/%s" % resource_plural
-    log = extension.NeutronClientExtension.get_logger('ListFoxSockets')
 
 
 COMMANDS = {
