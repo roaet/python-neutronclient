@@ -254,7 +254,8 @@ class HTTPClient(object):
 
     def authenticate(self):
         if self.auth_plugin:
-            self._plugin_auth(self.auth_url)
+            resp_body = self._plugin_auth(self.auth_url)
+            self._extract_service_catalog(resp_body)
         elif self.auth_strategy == 'keystone':
             self._authenticate_keystone()
         elif self.auth_strategy == 'noauth':

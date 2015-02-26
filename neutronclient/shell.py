@@ -394,6 +394,7 @@ class NeutronShell(app.App):
         # password flow auth
         self.auth_client = None
         self.api_version = apiversion
+        auth_plugin.discover_auth_systems()
 
     def build_option_parser(self, description, version):
         """Return an argparse option parser for this application.
