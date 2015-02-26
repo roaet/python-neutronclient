@@ -41,7 +41,7 @@ def discover_auth_systems():
 
     This won't take into account the old style auth-systems.
     """
-    ep_name = 'openstack.client.auth_plugin'
+    ep_name = 'rackspace.neutronclient.auth_plugin'
     emgr = extension.ExtensionManager(ep_name, invoke_on_load=False)
     for ext in emgr:
         try:
@@ -145,12 +145,12 @@ class DeprecatedAuthPlugin(object):
         self._load_endpoints()
 
     def _load_endpoints(self):
-        ep_name = 'openstack.client.auth_url'
+        ep_name = 'rackspace.neutronclient.auth_url'
         fn = _load_entry_point(ep_name, name=self.auth_system)
         if fn:
             self.get_auth_url = fn
 
-        ep_name = 'openstack.client.authenticate'
+        ep_name = 'rackspace.neutronclient.authenticate'
         fn = _load_entry_point(ep_name, name=self.auth_system)
         if fn:
             self.authenticate = fn
