@@ -17,5 +17,5 @@
 
 import pbr.version
 
-
-__version__ = pbr.version.VersionInfo('python-neutronclient').version_string()
+target = 'rackspace-python-neutronclient'
+__version__ = pbr.version.VersionInfo(target).version_string()
