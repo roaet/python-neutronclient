@@ -122,6 +122,8 @@ class HTTPClient(object):
             return kwargs
 
     def authenticate_and_fetch_endpoint_url(self):
+        if self.auth_strategy == 'noauth':
+            return
         if not self.auth_token:
             self.authenticate()
         if not self.endpoint_url:
